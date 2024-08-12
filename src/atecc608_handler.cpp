@@ -122,12 +122,12 @@ int write_key_slot(uint8_t key, uint8_t *datakey, size_t len)
  *  \param[in] i2cAddr i2c address of the slave chip
  *  \return ATCA_SUCCESS on success, otherwise an error code.
  */
-int atecc_handler_init(int i2cAddr){
+int atecc_handler_init(int i2cAddr, int bus = 1){
     // Init the constuctor for the library
     cfg.iface_type = ATCA_I2C_IFACE;  // Type of communication -> I2C mode
     cfg.devtype = ATECC608B;          // Type of chip
     cfg.atcai2c.address = i2cAddr; // I2C address of Adafruit device
-    cfg.atcai2c.bus = 1;
+    cfg.atcai2c.bus = bus;
     // cfg.atcai2c.baud = 400000;
     cfg.atcai2c.baud = 100000;
     cfg.wake_delay = 1500; // Delay of wake up (1500 ms)
