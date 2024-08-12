@@ -6,7 +6,7 @@ import sys
 atecc608_lib = ctypes.CDLL('../build/libatecc608_handler.so')
 
 # Define argument and return types for the functions
-atecc608_lib.atecc_handler_init.argtypes = [c_int]
+atecc608_lib.atecc_handler_init.argtypes = [c_int, c_int]
 atecc608_lib.atecc_handler_init.restype = c_int
 
 atecc608_lib.atecc_handler_write_configuration.argtypes = [POINTER(c_uint8), c_size_t]
@@ -34,7 +34,7 @@ def print_hex_buffer(input):
     print(" ".join(f"{x:02X}" for x in input))
 
 def write_atecc_config():
-    status = atecc608_lib.atecc_handler_init(0xC0)
+    status = atecc608_lib.atecc_handler_init(0xC0, 1)
     if status:
         print(f"atecc_handler_init Fail! {status}")
         return
@@ -51,7 +51,7 @@ def write_atecc_config():
         return
 
 def general_test():
-    status = atecc608_lib.atecc_handler_init(0xC0)
+    status = atecc608_lib.atecc_handler_init(0xC0, 1)
     if status:
         print(f"atecc_handler_init Fail! {status}")
         return 0
