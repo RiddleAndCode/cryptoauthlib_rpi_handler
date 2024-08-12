@@ -48,3 +48,15 @@ cd build
 cmake ..
 make
 ```
+
+# Run Tests
+
+under build directory
+```
+./test_atecc608
+```
+
+under python directory
+```
+python3 test_atecc608.py
+```
