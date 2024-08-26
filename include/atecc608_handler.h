@@ -86,3 +86,5 @@ extern "C" int atecc_handler_sign(int slot, const uint8_t * msg, uint8_t * signa
 extern "C" int atecc_handler_verify(int slot, const uint8_t * msg, const uint8_t * signature, const uint8_t * pub_key);
 extern "C" int atecc_handler_genkey(int slot, uint8_t * pub_key);
 extern "C" int atecc_handler_lock_slot(int slot);
+extern "C" int atecc_handler_write_data(int slot, uint8_t* data, size_t data_len);
+extern "C" int atecc_handler_read_data(int slot, uint8_t* data, size_t data_len);
