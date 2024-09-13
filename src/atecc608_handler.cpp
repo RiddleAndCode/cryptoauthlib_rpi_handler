@@ -30,6 +30,20 @@ int atecc_handler_write_configuration(const uint8_t *config, size_t len)
     return status;
 }
 
+/** \brief Write default configuration to the chip.
+ *  \return ATCA_SUCCESS on success, otherwise an error code.
+ */
+int atecc_handle_write_default_configuration(){
+    ATCA_STATUS status;
+    status = atcab_init(&cfg);
+    if (status == ATCA_SUCCESS)
+    {
+        status = atecc_handler_write_configuration(ECCX08_DEFAULT_CONFIGURATION_VALS, sizeof(ECCX08_DEFAULT_CONFIGURATION_VALS));
+        return status;
+    }
+    return status;
+}
+
 
 /** \brief Check if a the DATA_ZONE or CONFIG_ZONE is locked
  *  \param[in] zone LOCK_ZONE_DATA or LOCK_ZONE_CONFIG
