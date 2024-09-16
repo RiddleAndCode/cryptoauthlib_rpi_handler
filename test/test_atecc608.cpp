@@ -17,14 +17,14 @@ void printHexBuffer(std::vector<uint8_t> input){
 
 void write_atecc_config()
 {
-  auto status = atecc_handler_init(0xC0);
+  auto status = atecc_handler_init(0xC0, 1);
   if(status){
     std::cout << "atecc_handler_init Fail! ";
     std::cout << status << "\n";
     return;
   }
 
-  status = atecc_handler_write_configuration(ECCX08_DEFAULT_CONFIGURATION_VALS, sizeof(ECCX08_DEFAULT_CONFIGURATION_VALS));
+  status = atecc_handle_write_default_configuration();
   if(status){
     std::cout << "atecc_handler_write_configuration Fail! ";
     std::cout << status << "\n";
@@ -41,7 +41,7 @@ void write_atecc_config()
 
 
 int general_test(){
-    auto status = atecc_handler_init(0xC0);
+    auto status = atecc_handler_init(0xC0, 1);
     if(status){
         std::cout << "atecc_handler_init Fail! ";
         std::cout << status << "\n";
@@ -120,7 +120,7 @@ int general_test(){
 
 
 int main(){
-    // write_atecc_config();
+    write_atecc_config();
     general_test();
 
     return 0;

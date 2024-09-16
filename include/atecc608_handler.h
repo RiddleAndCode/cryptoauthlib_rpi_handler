@@ -77,6 +77,7 @@ const uint8_t ECCX08_DEFAULT_CONFIGURATION_VALS[112] = {
 };
 
 extern "C" int atecc_handler_write_configuration(const uint8_t *config, size_t len);
+extern "C" int atecc_handle_write_default_configuration();
 extern "C" int atecc_handler_lock_zone(uint8_t zone);
 extern "C" int atecc_handler_init(int i2cAddr, int bus);
 extern "C" int atecc_handler_read_configuration(uint8_t *config_data);
