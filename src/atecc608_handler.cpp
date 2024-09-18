@@ -215,28 +215,36 @@ int atecc_handler_inject_priv_key(int slot, uint8_t* priv_key){
  *  \return ATCA_SUCCESS on success, otherwise an error code.
  */
 int atecc_handler_write_data(int slot, uint8_t* data, size_t data_len) {
-    if (data_len % 32 != 0 || !data) {
-        return ATCA_BAD_PARAM; // Validate data and length
+    if (!data || data_len == 0) {
+        return ATCA_BAD_PARAM;
     }
 
-    ATCA_STATUS status = atcab_wakeup();  // Wake up the device
+    ATCA_STATUS status = atcab_wakeup();
     if (status != ATCA_SUCCESS) {
         return status;
     }
 
-    // Ensure the config zone is locked and slot allows writing
-    uint8_t config_data[128];
-    status = atecc_handler_read_configuration(config_data);
-    if (status != ATCA_SUCCESS) return status;
-
-    std::bitset<8> slotConfig_H = config_data[21 + (slot * 2)];
-    if (!slotConfig_H[6] || check_lock_zone(LOCK_ZONE_CONFIG) == ATCA_NOT_LOCKED) {
-        return ATCA_EXECUTION_ERROR;  // Ensure write is allowed
+    // Check both config and data zone locks
+    if (check_lock_zone(LOCK_ZONE_CONFIG) == ATCA_NOT_LOCKED ||
+        check_lock_zone(LOCK_ZONE_DATA) == ATCA_NOT_LOCKED) {
+        return ATCA_EXECUTION_ERROR;
     }
 
-    // Write data in 32-byte chunks
-    for (size_t offset = 0; offset < data_len; offset += 32) {
-        status = atcab_write_bytes_zone(ATCA_ZONE_DATA, slot, offset, &data[offset], 32);
+    // Calculate the number of blocks and any remaining bytes
+    size_t num_blocks = data_len / 32;
+    size_t remaining_bytes = data_len % 32;
+
+    // Write full blocks
+    for (size_t i = 0; i < num_blocks; i++) {
+        status = atcab_write_zone(ATCA_ZONE_DATA, slot, i, 0, &data[i * 32], 32);
+        if (status != ATCA_SUCCESS) {
+            return status;
+        }
+    }
+
+    // Write remaining bytes if any
+    if (remaining_bytes > 0) {
+        status = atcab_write_zone(ATCA_ZONE_DATA, slot, num_blocks, 0, &data[num_blocks * 32], remaining_bytes);
         if (status != ATCA_SUCCESS) {
             return status;
         }
@@ -253,28 +261,36 @@ int atecc_handler_write_data(int slot, uint8_t* data, size_t data_len) {
  *  \return ATCA_SUCCESS on success, otherwise an error code.
  */
 int atecc_handler_read_data(int slot, uint8_t* data, size_t data_len) {
-    if (data_len % 32 != 0 || !data) {
-        return ATCA_BAD_PARAM; // Validate data and length
+    if (!data || data_len == 0) {
+        return ATCA_BAD_PARAM;
     }
 
-    ATCA_STATUS status = atcab_wakeup();  // Wake up the device
+    ATCA_STATUS status = atcab_wakeup();
     if (status != ATCA_SUCCESS) {
         return status;
     }
 
-    // Ensure the config zone is locked and slot allows reading
-    uint8_t config_data[128];
-    status = atecc_handler_read_configuration(config_data);
-    if (status != ATCA_SUCCESS) return status;
-
-    std::bitset<8> slotConfig_H = config_data[21 + (slot * 2)];
-    if (!slotConfig_H[6] || check_lock_zone(LOCK_ZONE_CONFIG) == ATCA_NOT_LOCKED) {
-        return ATCA_EXECUTION_ERROR;  // Ensure read is allowed
+    // Check both config and data zone locks
+    if (check_lock_zone(LOCK_ZONE_CONFIG) == ATCA_NOT_LOCKED ||
+        check_lock_zone(LOCK_ZONE_DATA) == ATCA_NOT_LOCKED) {
+        return ATCA_EXECUTION_ERROR;
     }
 
-    // Read data in 32-byte chunks
-    for (size_t offset = 0; offset < data_len; offset += 32) {
-        status = atcab_read_bytes_zone(ATCA_ZONE_DATA, slot, offset, &data[offset], 32);
+    // Calculate the number of blocks and any remaining bytes
+    size_t num_blocks = data_len / 32;
+    size_t remaining_bytes = data_len % 32;
+
+    // Read full blocks
+    for (size_t i = 0; i < num_blocks; i++) {
+        status = atcab_read_zone(ATCA_ZONE_DATA, slot, i, 0, &data[i * 32], 32);
+        if (status != ATCA_SUCCESS) {
+            return status;
+        }
+    }
+
+    // Read remaining bytes if any
+    if (remaining_bytes > 0) {
+        status = atcab_read_zone(ATCA_ZONE_DATA, slot, num_blocks, 0, &data[num_blocks * 32], remaining_bytes);
         if (status != ATCA_SUCCESS) {
             return status;
         }
