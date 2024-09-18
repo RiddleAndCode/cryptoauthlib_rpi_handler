@@ -224,6 +224,12 @@ int atecc_handler_write_data(int slot, uint8_t* data, size_t data_len) {
         return status;
     }
 
+    // Check both config and data zone locks
+    if (check_lock_zone(LOCK_ZONE_CONFIG) == ATCA_NOT_LOCKED ||
+        check_lock_zone(LOCK_ZONE_DATA) == ATCA_NOT_LOCKED) {
+        return ATCA_EXECUTION_ERROR;
+    }
+
     // Calculate the number of blocks and any remaining bytes
     size_t num_blocks = data_len / 32;
     size_t remaining_bytes = data_len % 32;
@@ -262,6 +268,12 @@ int atecc_handler_read_data(int slot, uint8_t* data, size_t data_len) {
     ATCA_STATUS status = atcab_wakeup();
     if (status != ATCA_SUCCESS) {
         return status;
+    }
+
+    // Check both config and data zone locks
+    if (check_lock_zone(LOCK_ZONE_CONFIG) == ATCA_NOT_LOCKED ||
+        check_lock_zone(LOCK_ZONE_DATA) == ATCA_NOT_LOCKED) {
+        return ATCA_EXECUTION_ERROR;
     }
 
     // Calculate the number of blocks and any remaining bytes
