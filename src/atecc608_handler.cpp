@@ -255,37 +255,53 @@ int atecc_handler_write_data(int slot, uint8_t* data, size_t data_len) {
  *  \return ATCA_SUCCESS on success, otherwise an error code.
  */
 int atecc_handler_read_data(int slot, uint8_t* data, size_t data_len) {
-    if (!data || data_len == 0) {
+    if (!data || data_len == 0 || data_len % 4 != 0) {
         return ATCA_BAD_PARAM;
     }
 
-    ATCA_STATUS status = atcab_wakeup();
+    size_t slot_size;
+    ATCA_STATUS status = atcab_get_zone_size(ATCA_ZONE_DATA, slot, &slot_size);
     if (status != ATCA_SUCCESS) {
         return status;
     }
 
-    // Calculate the number of blocks and any remaining bytes
-    size_t num_blocks = data_len / 32;
-    size_t remaining_bytes = data_len % 32;
-
-    // Read full blocks
-    for (size_t i = 0; i < num_blocks; i++) {
-        status = atcab_read_zone(ATCA_ZONE_DATA, slot, i, 0, &data[i * 32], 32);
-        if (status != ATCA_SUCCESS) {
-            return status;
-        }
+    if (data_len > slot_size) {
+        return ATCA_BAD_PARAM; // Data length exceeds slot size
     }
 
-    // Read remaining bytes if any
-    if (remaining_bytes > 0) {
-        status = atcab_read_zone(ATCA_ZONE_DATA, slot, num_blocks, 0, &data[num_blocks * 32], remaining_bytes);
+    status = atcab_wakeup();
+    if (status != ATCA_SUCCESS) {
+        return status;
+    }
+
+    size_t num_blocks = data_len / 32;
+    size_t remaining_bytes = data_len % 32;
+    size_t bytes_read = 0;
+
+    // Read full 32-byte blocks
+    for (size_t i = 0; i < num_blocks; i++) {
+        status = atcab_read_zone(ATCA_ZONE_DATA, slot, i, 0, &data[bytes_read], 32);
         if (status != ATCA_SUCCESS) {
             return status;
         }
+        bytes_read += 32;
+    }
+
+    // Read remaining 4-byte words
+    size_t num_words = remaining_bytes / 4;
+    for (size_t w = 0; w < num_words; w++) {
+        size_t block = num_blocks;
+        size_t offset = w;
+        status = atcab_read_zone(ATCA_ZONE_DATA, slot, block, offset, &data[bytes_read], 4);
+        if (status != ATCA_SUCCESS) {
+            return status;
+        }
+        bytes_read += 4;
     }
 
     return ATCA_SUCCESS;
 }
+
 
 
 /** \brief Initialize atecc object and bus
