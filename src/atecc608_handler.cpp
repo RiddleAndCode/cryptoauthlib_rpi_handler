@@ -38,7 +38,7 @@ int atecc_handle_write_default_configuration(){
     status = atcab_init(&cfg);
     if (status == ATCA_SUCCESS)
     {
-        status = atecc_handler_write_configuration(ENERGY_AGENT_ATEC_CONFIG, sizeof(ENERGY_AGENT_ATEC_CONFIG));
+        status = atecc_handler_write_configuration(ECCX08_DEFAULT_CONFIGURATION_VALS, sizeof(ECCX08_DEFAULT_CONFIGURATION_VALS));
         return status;
     }
     return status;
@@ -226,7 +226,7 @@ int atecc_handler_write_data(int slot, uint8_t* data, size_t data_len) {
     }
 
     if (data_len > slot_size) {
-        return ATCA_BAD_PARAM; // Data length exceeds slot size
+        return slot_size;
     }
 
     status = atcab_wakeup();
