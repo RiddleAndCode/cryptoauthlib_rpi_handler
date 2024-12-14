@@ -208,91 +208,118 @@ int atecc_handler_inject_priv_key(int slot, uint8_t* priv_key){
     return status;
 }
 
-    /** save data in slot
+/** save data in slot
  *  \param[in] slot slot number to which data is to be written
  *  \param[in] data data byte array to write
- *  \param[in] data_len length of the data byte array
+ *  \param[in] data_len length of the data byte array (must be a multiple of 32)
  *  \return ATCA_SUCCESS on success, otherwise an error code.
  */
 int atecc_handler_write_data(int slot, uint8_t* data, size_t data_len) {
-    ATCA_STATUS status = ATCA_GEN_FAIL;
-    uint8_t config_data[128];
+    if (!data || data_len == 0 || data_len % 4 != 0) {
+        return ATCA_BAD_PARAM;
+    }
 
-    // Wake up the device
+    size_t slot_size;
+    ATCA_STATUS status = atcab_get_zone_size(ATCA_ZONE_DATA, slot, &slot_size);
+    if (status != ATCA_SUCCESS) {
+        return status;
+    }
+
+    if (data_len > slot_size) {
+        return slot_size;
+    }
+
     status = atcab_wakeup();
     if (status != ATCA_SUCCESS) {
         return status;
     }
 
-    // Read the configuration zone
-    status = atecc_handler_read_configuration(config_data);
-    if (status != ATCA_SUCCESS) {
-        return status;
+    size_t bytes_written = 0;
+    size_t remaining_bytes = data_len;
+
+    // Write full 32-byte blocks
+    while (remaining_bytes >= 32) {
+        size_t block = bytes_written / 32;
+        status = atcab_write_zone(ATCA_ZONE_DATA, slot, block, 0, &data[bytes_written], 32);
+        if (status != ATCA_SUCCESS) {
+            return status;
+        }
+        bytes_written += 32;
+        remaining_bytes -= 32;
     }
 
-    /* Check if writing is allowed for the given slot */
-    std::bitset<8> slotConfig_H = config_data[21 + (slot * 2)];
-    if (!slotConfig_H[6]) {  // Example condition; adapt as necessary
-        return ATCA_EXECUTION_ERROR;
-    }
-
-    /* Config Zone should be locked for this process */
-    status = check_lock_zone(LOCK_ZONE_CONFIG);
-    if (status == ATCA_NOT_LOCKED) {
-        return status;
-    }
-
-    // Write data to the specified slot
-    status = atcab_write_bytes_zone(ATCA_ZONE_DATA, slot, 0, data, data_len);
-    if (status != ATCA_SUCCESS) {
-        return status;
+    // Write remaining 4-byte words
+    while (remaining_bytes >= 4) {
+        size_t block = bytes_written / 32;
+        size_t offset = (bytes_written % 32) / 4;
+        status = atcab_write_zone(ATCA_ZONE_DATA, slot, block, offset, &data[bytes_written], 4);
+        if (status != ATCA_SUCCESS) {
+            return status;
+        }
+        bytes_written += 4;
+        remaining_bytes -= 4;
     }
 
     return ATCA_SUCCESS;
 }
+
+
 
 /* read data from slot
  *  \param[in] slot slot number from which data is to be read
  *  \param[out] data buffer to store the read data
- *  \param[in] data_len length of the data byte array
+ *  \param[in] data_len length of the data byte array (must be a multiple of 32)
  *  \return ATCA_SUCCESS on success, otherwise an error code.
  */
 int atecc_handler_read_data(int slot, uint8_t* data, size_t data_len) {
-    ATCA_STATUS status = ATCA_GEN_FAIL;
-    uint8_t config_data[128];
+    if (!data || data_len == 0 || data_len % 4 != 0) {
+        return ATCA_BAD_PARAM;
+    }
 
-    // Wake up the device
+    size_t slot_size;
+    ATCA_STATUS status = atcab_get_zone_size(ATCA_ZONE_DATA, slot, &slot_size);
+    if (status != ATCA_SUCCESS) {
+        return status;
+    }
+
+    if (data_len > slot_size) {
+        return ATCA_BAD_PARAM; // Data length exceeds slot size
+    }
+
     status = atcab_wakeup();
     if (status != ATCA_SUCCESS) {
         return status;
     }
 
-    // Read the configuration zone
-    status = atecc_handler_read_configuration(config_data);
-    if (status != ATCA_SUCCESS) {
-        return status;
+    size_t num_blocks = data_len / 32;
+    size_t remaining_bytes = data_len % 32;
+    size_t bytes_read = 0;
+
+    // Read full 32-byte blocks
+    for (size_t i = 0; i < num_blocks; i++) {
+            status = atcab_read_zone(ATCA_ZONE_DATA, slot, i, 0, &data[bytes_read], 32);
+        if (status != ATCA_SUCCESS) {
+            return status;
+        }
+        bytes_read += 32;
     }
 
-    /* Check if reading is allowed for the given slot */
-    std::bitset<8> slotConfig_H = config_data[21 + (slot * 2)];
-    if (!slotConfig_H[6]) {  // Example condition; adapt as necessary
-        return ATCA_EXECUTION_ERROR;
-    }
-
-    /* Config Zone should be locked for this process */
-    status = check_lock_zone(LOCK_ZONE_CONFIG);
-    if (status == ATCA_NOT_LOCKED) {
-        return status;
-    }
-
-    // Read data from the specified slot
-    status = atcab_read_bytes_zone(ATCA_ZONE_DATA, slot, 0, data, data_len);
-    if (status != ATCA_SUCCESS) {
-        return status;
+    // Read remaining 4-byte words
+    size_t num_words = remaining_bytes / 4;
+    for (size_t w = 0; w < num_words; w++) {
+        size_t block = num_blocks;
+        size_t offset = w;
+        status = atcab_read_zone(ATCA_ZONE_DATA, slot, block, offset, &data[bytes_read], 4);
+        if (status != ATCA_SUCCESS) {
+            return status;
+        }
+        bytes_read += 4;
     }
 
     return ATCA_SUCCESS;
 }
+
+
 
 /** \brief Initialize atecc object and bus
  *  \param[in] slot slot number of key to be written
